@@ -5,6 +5,7 @@
   "bin": {
     "aws-infra-cdk": "bin/aws-infra-cdk.js"
   },
+  "repository": "git@github.com:mak-ansari/cdk-cognito-passwordless.git",
   "author": "Mak Ansari",
   "license": "ISC",
   "scripts": {
