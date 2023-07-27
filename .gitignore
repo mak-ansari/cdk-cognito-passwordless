@@ -3,9 +3,10 @@
 *.d.ts
 node_modules
 .DS_Store
+yarn.lock
 
 # CDK asset staging directory
-!context/*/**
+!context/*/**{.ts}
 
 .cdk.staging
 cdk.out

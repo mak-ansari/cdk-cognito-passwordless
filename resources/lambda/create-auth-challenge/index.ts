@@ -1,7 +1,7 @@
 import { CreateAuthChallengeTriggerHandler } from 'aws-lambda';
-import { SES } from 'aws-sdk';
+// import { SES } from 'aws-sdk';
 
-const ses = new SES();
+// const ses = new SES();
 
 export const handler: CreateAuthChallengeTriggerHandler = async event => {
     
@@ -41,7 +41,7 @@ export const handler: CreateAuthChallengeTriggerHandler = async event => {
 };
 
 async function sendEmail(emailAddress: string, secretLoginCode: string) {
-    const params: SES.SendEmailRequest = {
+    const params: any = {
         Destination: { ToAddresses: [emailAddress] },
         Message: {
             Body: {
@@ -67,7 +67,7 @@ async function sendEmail(emailAddress: string, secretLoginCode: string) {
         },
         Source: process.env.SES_FROM_ADDRESS!
     };
-    await ses.sendEmail(params).promise();
+    // await ses.sendEmail(params).promise();
 }
 
 function randomString(length: number) {

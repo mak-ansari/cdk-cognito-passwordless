@@ -70,41 +70,6 @@ export class AppCognitoStack extends cdk.Stack {
             timeout: cdk.Duration.seconds(30)
         });
 
-        // Create IAM Role for PostAuthentication
-        const postAuthRole = new iam.Role(this, 'PostAuthenticationRole', {
-            assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-            managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
-        });
-
-        // Create IAM Policy for PostAuthentication function role to update user attributes
-        const setUserAttributesPolicy = new iam.Policy(this, 'SetUserAttributesPolicy', {
-            statements: [
-            new iam.PolicyStatement({
-                effect: iam.Effect.ALLOW,
-                actions: ['cognito-idp:AdminUpdateUserAttributes'],
-                resources: [this.formatArn({
-                    service: 'cognito-idp',
-                    resource: `userpool`,
-                    resourceName: userPoolName.valueAsString
-                })],
-            }),
-            ],
-        });
-
-        // Assign the IAM Policy to the PostAuthentication function role
-        postAuthRole.attachInlinePolicy(setUserAttributesPolicy);
-
-        // Lambda Functions | Post Authentication
-        const postAuthenticationFn = new lambda.Function(this, 'PostAuthentication', {
-            functionName: `${environment}-post-authentication-fn`,
-            code: lambda.Code.fromAsset(path.join(__dirname, '../../resources/lambda/post-authentication'), { exclude: ['*.ts'] }),
-            handler: 'index.handler',
-            runtime: lambda.Runtime.NODEJS_18_X,
-            memorySize: 128,
-            timeout: cdk.Duration.seconds(30),
-            role: postAuthRole
-        });
-        
         // Create user pool
         const userPool = new cognito.UserPool(this, 'AppCognitoUserPool', {
             userPoolName: userPoolName.valueAsString,
@@ -131,10 +96,42 @@ export class AppCognitoStack extends cdk.Stack {
                 defineAuthChallenge: defineAuthChallengeFn,
                 createAuthChallenge: createAuthChallengeFn,
                 verifyAuthChallengeResponse: verifyAuthChallengeResponseFn,
-                preSignUp: preSignUpFn,
-                postAuthentication: postAuthenticationFn
+                preSignUp: preSignUpFn
             }
         });
+
+        // Create IAM Role for PostAuthentication
+        const postAuthRole = new iam.Role(this, 'PostAuthenticationRole', {
+            assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+            managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        });
+
+        // Create IAM Policy for PostAuthentication function role to update user attributes
+        const setUserAttributesPolicy = new iam.Policy(this, 'SetUserAttributesPolicy', {
+            statements: [
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['cognito-idp:AdminUpdateUserAttributes'],
+                resources: [userPool.userPoolArn],
+            }),
+            ],
+        });
+
+        // Assign the IAM Policy to the PostAuthentication function role
+        postAuthRole.attachInlinePolicy(setUserAttributesPolicy);
+
+        // Lambda Functions | Post Authentication
+        const postAuthenticationFn = new lambda.Function(this, 'PostAuthentication', {
+            functionName: `${environment}-post-authentication-fn`,
+            code: lambda.Code.fromAsset(path.join(__dirname, '../../resources/lambda/post-authentication'), { exclude: ['*.ts'] }),
+            handler: 'index.handler',
+            runtime: lambda.Runtime.NODEJS_18_X,
+            memorySize: 128,
+            timeout: cdk.Duration.seconds(30),
+            role: postAuthRole
+        });
+
+        userPool.addTrigger(cognito.UserPoolOperation.POST_AUTHENTICATION, postAuthenticationFn)
 
         // Create user pool app client
         const appClient = userPool.addClient('AppCognitoUserPoolAppClient', {
